@@ -4,6 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import webbrowser
+from datetime import datetime
 
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
@@ -15,11 +16,12 @@ def scrape_jobstack():
 
     jobs = []
     job_list = soup.select('.jobposts-list .jobposts-item')
+    fetch_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     for job in job_list:
         title = job.select_one('h3').text.strip()
         link = "https://www.jobstack.it" + job.select_one('a')['href']
-        jobs.append({"title": title, "link": link, "source": "JobStack"})
+        jobs.append({"title": title, "link": link, "source": "JobStack", "fetch_date": fetch_date})
     
     return jobs
 
@@ -30,6 +32,8 @@ def scrape_startupjobs():
 
     jobs = []
     job_container = soup.select_one('div.max-md\:bleed-container.flex.flex-col')
+    fetch_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
     if job_container:
         for job_link in job_container.select('a'):
             title = job_link.select_one('h5')
@@ -38,7 +42,7 @@ def scrape_startupjobs():
                 link = job_link['href']
                 if not link.startswith('http'):
                     link = 'https://www.startupjobs.cz' + link
-                jobs.append({"title": title, "link": link, "source": "StartupJobs"})
+                jobs.append({"title": title, "link": link, "source": "StartupJobs", "fetch_date": fetch_date})
     return jobs
 
 class JobScraperApp(ctk.CTk):
@@ -46,7 +50,7 @@ class JobScraperApp(ctk.CTk):
         super().__init__()
 
         self.title("Modern Job Scraper")
-        self.geometry("900x600")
+        self.geometry("1000x600")  # Increased width for the new column
 
         self.jobs = []
         self.applied_jobs = self.load_applied_jobs()
@@ -72,12 +76,14 @@ class JobScraperApp(ctk.CTk):
         self.main_content.pack(side="right", fill="both", expand=True, padx=20, pady=20)
 
         # Treeview
-        self.tree = ttk.Treeview(self.main_content, columns=('Title', 'Source', 'Applied'), show='headings')
+        self.tree = ttk.Treeview(self.main_content, columns=('Title', 'Source', 'Fetch Date', 'Applied'), show='headings')
         self.tree.heading('Title', text='Title')
         self.tree.heading('Source', text='Source')
+        self.tree.heading('Fetch Date', text='Fetch Date')
         self.tree.heading('Applied', text='Applied')
         self.tree.column('Title', width=400)
         self.tree.column('Source', width=100)
+        self.tree.column('Fetch Date', width=150)
         self.tree.column('Applied', width=100)
         self.tree.pack(fill="both", expand=True)
 
@@ -101,7 +107,7 @@ class JobScraperApp(ctk.CTk):
         
         for job in self.jobs:
             applied = "Yes" if job['link'] in self.applied_jobs else "No"
-            self.tree.insert('', 'end', values=(job['title'], job['source'], applied))
+            self.tree.insert('', 'end', values=(job['title'], job['source'], job['fetch_date'], applied))
 
     def on_double_click(self, event):
         item = self.tree.selection()[0]
